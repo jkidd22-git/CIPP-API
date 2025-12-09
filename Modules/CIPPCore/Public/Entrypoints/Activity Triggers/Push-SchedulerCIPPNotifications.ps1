@@ -115,16 +115,19 @@ function Push-SchedulerCIPPNotifications {
             }
 
             if ($CurrentStandardsLogs) {
-                $JSONContent = New-CIPPAlertTemplate -Data $Data -Format 'json' -InputObject 'table' -CIPPURL $CIPPURL
-                $CurrentStandardsLogs | ConvertTo-Json -Compress
-                Send-CIPPAlert -Type 'webhook' -JSONContent $JSONContent -TenantFilter $Tenant -APIName 'Alerts'
-                $updateStandards = $CurrentStandardsLogs | ForEach-Object {
-                    if ($_.PSObject.Properties.Name -contains 'sentAsAlert') {
-                        $_.sentAsAlert = $true
-                    } else {
-                        $_ | Add-Member -MemberType NoteProperty -Name sentAsAlert -Value $true -Force
+                foreach ($tenant in ($CurrentStandardsLogs.Tenant | Sort-Object -Unique)) {
+                    $Data = ($CurrentStandardsLogs | Where-Object -Property tenant -EQ $tenant)
+                    $JSONContent = New-CIPPAlertTemplate -Data $Data -Format 'json' -InputObject 'table' -CIPPURL $CIPPURL
+                    $CurrentStandardsLogs | ConvertTo-Json -Compress
+                    Send-CIPPAlert -Type 'webhook' -JSONContent $JSONContent -TenantFilter $Tenant -APIName 'Alerts'
+                    $updateStandards = $CurrentStandardsLogs | ForEach-Object {
+                        if ($_.PSObject.Properties.Name -contains 'sentAsAlert') {
+                            $_.sentAsAlert = $true
+                        } else {
+                            $_ | Add-Member -MemberType NoteProperty -Name sentAsAlert -Value $true -Force
+                        }
+                        $_
                     }
-                    $_
                 }
             }
 
